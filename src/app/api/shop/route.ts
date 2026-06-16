@@ -1,9 +1,11 @@
 import { auth } from "@/auth"
-import { prisma } from "@/lib/db"
+import { ConvexHttpClient } from "convex/browser"
+import { api } from "../../../../convex/_generated/api"
 import Groq from "groq-sdk"
 import { NextRequest, NextResponse } from "next/server"
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 const PRICE_RANGES: Record<string, string> = {
   budget: "under $30",
@@ -17,16 +19,14 @@ export async function POST(req: NextRequest) {
 
   const { budget = "mid", reason = "wardrobe gaps" } = await req.json()
 
-  let wardrobe
+  let wardrobe: any[] = []
   try {
-    wardrobe = await prisma.clothing.findMany({
-      where: { userId: session.user.id },
-      select: { category: true, color: true },
-    })
+    wardrobe = await convex.query(api.clothing.get, { userId: session.user.id }) || []
   } catch (error) {
     console.error("Failed to load wardrobe for shop:", error)
     return NextResponse.json({ error: "Database unavailable" }, { status: 503 })
   }
+
 
   const allCategories = ["top", "bottom", "shoes", "outerwear", "accessory", "dress"]
   const ownedCategories = [...new Set(wardrobe.map(c => c.category))]

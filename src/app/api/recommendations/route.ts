@@ -1,9 +1,12 @@
 import { auth } from "@/auth"
-import { prisma } from "@/lib/db"
+import { ConvexHttpClient } from "convex/browser"
+import { api } from "../../../../convex/_generated/api"
 import Groq from "groq-sdk"
 import { NextRequest, NextResponse } from "next/server"
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+
 
 const BUDGET_RANGES: Record<string, { label: string; max: number }> = {
   student: { label: "under $25",    max: 25  },
@@ -35,13 +38,15 @@ export async function POST(req: NextRequest) {
   const { event, budget: budgetParam } = await req.json()
 
   // Get user profile + wardrobe
-  let profile: { bodyType: string | null; skinTone: string | null; budgetTier: string | null; stylePrefs: string[] } | null
-  let wardrobe: { id: string; category: string; color: string; imageUrl: string }[]
+  let profile: { bodyType?: string; skinTone?: string; budgetTier?: string; stylePrefs?: string[] } | null = null
+  let wardrobe: { id: string; category: string; color: string; imageUrl: string }[] = []
   try {
-    [profile, wardrobe] = await Promise.all([
-      prisma.userProfile.findUnique({ where: { userId: session.user.id } }),
-      prisma.clothing.findMany({ where: { userId: session.user.id }, select: { id: true, category: true, color: true, imageUrl: true } }),
+    const [rawProfile, rawWardrobe] = await Promise.all([
+      convex.query(api.userProfiles.get, { userId: session.user.id }),
+      convex.query(api.clothing.get, { userId: session.user.id }),
     ])
+    profile = rawProfile
+    wardrobe = rawWardrobe ?? []
   } catch (error) {
     console.error("Failed to load profile/wardrobe for recommendations:", error)
     return NextResponse.json({ error: "Database unavailable" }, { status: 503 })

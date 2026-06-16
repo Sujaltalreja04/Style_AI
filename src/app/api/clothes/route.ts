@@ -1,16 +1,16 @@
 import { auth } from "@/auth"
-import { prisma } from "@/lib/db"
+import { ConvexHttpClient } from "convex/browser"
+import { api } from "../../../../convex/_generated/api"
 import { NextRequest, NextResponse } from "next/server"
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export async function GET() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Not logged in" }, { status: 401 })
 
   try {
-    const clothes = await prisma.clothing.findMany({
-      where: { userId: session.user.id },
-      orderBy: { createdAt: "desc" },
-    })
+    const clothes = await convex.query(api.clothing.get, { userId: session.user.id })
     return NextResponse.json(clothes)
   } catch (error) {
     console.error("Failed to load clothes:", error)
@@ -29,15 +29,13 @@ export async function POST(req: NextRequest) {
   if (!imageUrl) return NextResponse.json({ error: "No image URL" }, { status: 400 })
 
   try {
-    const clothing = await prisma.clothing.create({
-      data: {
-        userId: session.user.id,
-        imageUrl,
-        category,
-        color,
-        pattern: "solid",
-        season: "all",
-      },
+    const clothing = await convex.mutation(api.clothing.create, {
+      userId: session.user.id,
+      imageUrl,
+      category,
+      color,
+      pattern: "solid",
+      season: "all",
     })
 
     return NextResponse.json(clothing)
@@ -46,3 +44,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Database unavailable" }, { status: 503 })
   }
 }
+

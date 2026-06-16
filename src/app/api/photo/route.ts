@@ -1,9 +1,11 @@
 import { auth } from "@/auth"
-import { prisma } from "@/lib/db"
+import { ConvexHttpClient } from "convex/browser"
+import { api } from "../../../../convex/_generated/api"
 import Groq from "groq-sdk"
 import { NextRequest, NextResponse } from "next/server"
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export async function POST(req: NextRequest) {
   const session = await auth()
@@ -12,16 +14,14 @@ export async function POST(req: NextRequest) {
   const { imageUrl, mode } = await req.json()
   if (!imageUrl) return NextResponse.json({ error: "No image" }, { status: 400 })
 
-  let wardrobe
+  let wardrobe: any[] = []
   try {
-    wardrobe = await prisma.clothing.findMany({
-      where: { userId: session.user.id },
-      select: { id: true, category: true, color: true, imageUrl: true },
-    })
+    wardrobe = await convex.query(api.clothing.get, { userId: session.user.id }) || []
   } catch (error) {
     console.error("Failed to load wardrobe for photo:", error)
     return NextResponse.json({ error: "Database unavailable" }, { status: 503 })
   }
+
 
   const wardrobeText = wardrobe.length === 0
     ? "User has no wardrobe items yet."

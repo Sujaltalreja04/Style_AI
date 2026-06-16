@@ -1,21 +1,22 @@
 import { auth } from "@/auth"
-import { prisma } from "@/lib/db"
+import { ConvexHttpClient } from "convex/browser"
+import { api } from "../../../../convex/_generated/api"
 import { NextResponse } from "next/server"
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
 
 export async function GET() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Not logged in" }, { status: 401 })
 
-  let clothes
+  let clothes: any[] = []
   try {
-    clothes = await prisma.clothing.findMany({
-      where: { userId: session.user.id },
-      select: { category: true, color: true, pattern: true, season: true, createdAt: true },
-    })
+    clothes = await convex.query(api.clothing.get, { userId: session.user.id }) || []
   } catch (error) {
     console.error("Failed to load insights:", error)
     return NextResponse.json({ error: "Database unavailable" }, { status: 503 })
   }
+
 
   if (clothes.length === 0) {
     return NextResponse.json({ empty: true })
