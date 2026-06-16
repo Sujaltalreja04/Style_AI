@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Clothing {
+  id        String   @id @default(cuid())
+  userId    String
+  imageUrl  String
+  category  String
+  color     String
+  pattern   String   @default("solid")
+  season    String   @default("all")
+  formality String   @default("casual")
+  brand     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── USER PROFILE ────────────────────────────────────────────
+model UserProfile {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  bodyType   String?  // pear | apple | hourglass | rectangle | inverted_triangle
+  skinTone   String?  // spring | summer | autumn | winter
+  budgetTier String?  // student | budget | mid | premium | luxury
+  budgetMax  Int?     // max price in USD
+  stylePrefs String[]
+  events     String[]
+  updatedAt  DateTime @updatedAt
+}
+
+// ─── SOCIAL ──────────────────────────────────────────────────
+model Post {
+  id          String   @id @default(cuid())
+  userId      String
+  userName    String
+  userImage   String?
+  caption     String?
+  coverImage  String
+  clothingIds String[]
+  likesCount  Int      @default(0)
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  likes       Like[]
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
