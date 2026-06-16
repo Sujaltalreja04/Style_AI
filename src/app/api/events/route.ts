@@ -4,7 +4,7 @@ import { api } from "../../../../convex/_generated/api"
 import { suggestOutfit } from "@/lib/groq"
 import { NextRequest, NextResponse } from "next/server"
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || "https://dummy-url.convex.cloud")
 
 export async function POST(req: NextRequest) {
   const session = await auth()

@@ -5,7 +5,7 @@ import Groq from "groq-sdk"
 import { NextRequest, NextResponse } from "next/server"
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!)
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL || "https://dummy-url.convex.cloud")
 
 export async function POST(req: NextRequest) {
   const session = await auth()
